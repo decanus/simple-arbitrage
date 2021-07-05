@@ -14,6 +14,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@weiroll/weiroll": "weiroll/weiroll",
     "@types/jasmine": "^3.6.2",
     "@types/lodash": "^4.14.165",
     "@types/node": "^14.14.10",

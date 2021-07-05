@@ -3,6 +3,8 @@ pragma solidity 0.6.12;
 
 pragma experimental ABIEncoderV2;
 
+import "@weiroll/weiroll/contracts/Executor.sol";
+
 interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint value);
     event Transfer(address indexed from, address indexed to, uint value);
@@ -29,6 +31,7 @@ interface IWETH is IERC20 {
 contract FlashBotsMultiCall {
     address private immutable owner;
     address private immutable executor;
+    Executor private immutable vm;
     IWETH private constant WETH = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
     modifier onlyExecutor() {
@@ -41,9 +44,10 @@ contract FlashBotsMultiCall {
         _;
     }
 
-    constructor(address _executor) public payable {
+    constructor(address _executor, Executor _vm) public payable {
         owner = msg.sender;
         executor = _executor;
+        vm = _vm;
         if (msg.value > 0) {
             WETH.deposit{value: msg.value}();
         }
@@ -52,14 +56,15 @@ contract FlashBotsMultiCall {
     receive() external payable {
     }
 
-    function uniswapWeth(uint256 _wethAmountToFirstMarket, uint256 _ethAmountToCoinbase, address[] memory _targets, bytes[] memory _payloads) external onlyExecutor payable {
+    function uniswapWeth(uint256 _wethAmountToFirstMarket, uint256 _ethAmountToCoinbase, bytes32[] calldata commands) external onlyExecutor payable {
         require (_targets.length == _payloads.length);
         uint256 _wethBalanceBefore = WETH.balanceOf(address(this));
         WETH.transfer(_targets[0], _wethAmountToFirstMarket);
-        for (uint256 i = 0; i < _targets.length; i++) {
-            (bool _success, bytes memory _response) = _targets[i].call(_payloads[i]);
-            require(_success); _response;
-        }
+
+        (bool success, bytes memory data) = address(executor).delegatecall(
+            abi.encodeWithSelector(Executor.execute.selector, commands, bytes[])
+        );
+        require(success);
 
         uint256 _wethBalanceAfter = WETH.balanceOf(address(this));
         require(_wethBalanceAfter > _wethBalanceBefore + _ethAmountToCoinbase);
