@@ -6,8 +6,10 @@ import { FACTORY_ADDRESSES } from "./addresses";
 import { Arbitrage } from "./Arbitrage";
 import { get } from "https"
 import { getDefaultRelaySigningKey } from "./utils";
+import { exit } from "process";
 
 const ETHEREUM_RPC_URL = process.env.ETHEREUM_RPC_URL || "http://127.0.0.1:8545"
+const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL
 const PRIVATE_KEY = process.env.PRIVATE_KEY || ""
 const BUNDLE_EXECUTOR_ADDRESS = process.env.BUNDLE_EXECUTOR_ADDRESS || ""
 
@@ -32,6 +34,7 @@ if (FLASHBOTS_RELAY_SIGNING_KEY === "") {
 const HEALTHCHECK_URL = process.env.HEALTHCHECK_URL || ""
 
 const provider = new providers.StaticJsonRpcProvider(ETHEREUM_RPC_URL);
+// const provider = new providers.StaticJsonRpcProvider(GOERLI_RPC_URL);
 
 const arbitrageSigningWallet = new Wallet(PRIVATE_KEY);
 const flashbotsRelaySigningWallet = new Wallet(FLASHBOTS_RELAY_SIGNING_KEY);
@@ -48,19 +51,25 @@ async function main() {
   console.log("Flashbots Relay Signing Wallet Address: " + await flashbotsRelaySigningWallet.getAddress())
   const flashbotsProvider = await FlashbotsBundleProvider.create(provider, flashbotsRelaySigningWallet);
   const arbitrage = new Arbitrage(
-    arbitrageSigningWallet,
+    arbitrageSigningWallet, // address that you send bundles with 
     flashbotsProvider,
-    new Contract(BUNDLE_EXECUTOR_ADDRESS, BUNDLE_EXECUTOR_ABI, provider) )
+    new Contract(BUNDLE_EXECUTOR_ADDRESS, BUNDLE_EXECUTOR_ABI, provider) );
 
+
+  // this only happens once; takes a long ass time. once you get it, the bot has the pairs it needs to make the trades
   const markets = await UniswappyV2EthPair.getUniswapMarketsByToken(provider, FACTORY_ADDRESSES);
-  provider.on('block', async (blockNumber) => {
-    await UniswappyV2EthPair.updateReserves(provider, markets.allMarketPairs);
-    const bestCrossedMarkets = await arbitrage.evaluateMarkets(markets.marketsByToken);
+
+  provider.on('block', async (blockNumber) => { // updates every block
+    await UniswappyV2EthPair.updateReserves(provider, markets.allMarketPairs); // updates reserves for each market pair
+    const bestCrossedMarkets = await arbitrage.evaluateMarkets(markets.marketsByToken); // gets profitable markets
     if (bestCrossedMarkets.length === 0) {
       console.log("No crossed markets")
       return
     }
-    bestCrossedMarkets.forEach(Arbitrage.printCrossedMarket);
+    bestCrossedMarkets.forEach(Arbitrage.printCrossedMarket); // prints markets
+
+    // calls arb func on each of the best crossed markets 
+    // ??? can some of this not be done concurrently, like in amm arbitrageur?
     arbitrage.takeCrossedMarkets(bestCrossedMarkets, blockNumber, MINER_REWARD_PERCENTAGE).then(healthcheck).catch(console.error)
   })
 }

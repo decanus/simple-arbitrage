@@ -52,6 +52,10 @@ contract FlashBotsMultiCall {
     receive() external payable {
     }
 
+
+    // actually runs the arb
+    // only works with WETH (guessing because gas)
+    // 
     function uniswapWeth(uint256 _wethAmountToFirstMarket, uint256 _ethAmountToCoinbase, address[] memory _targets, bytes[] memory _payloads) external onlyExecutor payable {
         require (_targets.length == _payloads.length);
         uint256 _wethBalanceBefore = WETH.balanceOf(address(this));
@@ -62,7 +66,7 @@ contract FlashBotsMultiCall {
         }
 
         uint256 _wethBalanceAfter = WETH.balanceOf(address(this));
-        require(_wethBalanceAfter > _wethBalanceBefore + _ethAmountToCoinbase);
+        require(_wethBalanceAfter > _wethBalanceBefore + _ethAmountToCoinbase); // must be profitable
         if (_ethAmountToCoinbase == 0) return;
 
         uint256 _ethBalance = address(this).balance;

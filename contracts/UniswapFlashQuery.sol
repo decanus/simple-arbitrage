@@ -17,6 +17,7 @@ abstract contract UniswapV2Factory  {
 
 // In order to quickly load up data from Uniswap-like market, this contract allows easy iteration with a single eth_call
 contract FlashBotsUniswapQuery {
+    // returns the amount of each pair along with a timestamp
     function getReservesByPairs(IUniswapV2Pair[] calldata _pairs) external view returns (uint256[3][] memory) {
         uint256[3][] memory result = new uint256[3][](_pairs.length);
         for (uint i = 0; i < _pairs.length; i++) {
@@ -39,6 +40,6 @@ contract FlashBotsUniswapQuery {
             result[i][1] = _uniswapPair.token1();
             result[i][2] = address(_uniswapPair);
         }
-        return result;
+        return result; // ex: ["address of USDC", "Address of WETH","Address of Pair"]
     }
 }

@@ -21,6 +21,7 @@ interface GroupedMarkets {
   allMarketPairs: Array<UniswappyV2EthPair>;
 }
 
+// 
 export class UniswappyV2EthPair extends EthMarket {
   static uniswapInterface = new Contract(WETH_ADDRESS, UNISWAP_PAIR_ABI);
   private _tokenBalances: TokenBalances
@@ -45,7 +46,7 @@ export class UniswappyV2EthPair extends EthMarket {
     return []
   }
 
-  static async getUniswappyMarkets(provider: providers.JsonRpcProvider, factoryAddress: string): Promise<Array<UniswappyV2EthPair>> {
+  static async getUniswappyMarkets(provider: providers.JsonRpcProvider, factoryAddress: string): Promise<Array<UniswappyV2EthPair>> { 
     const uniswapQuery = new Contract(UNISWAP_LOOKUP_CONTRACT_ADDRESS, UNISWAP_QUERY_ABI, provider);
 
     const marketPairs = new Array<UniswappyV2EthPair>()
@@ -72,7 +73,6 @@ export class UniswappyV2EthPair extends EthMarket {
         break
       }
     }
-
     return marketPairs
   }
 
